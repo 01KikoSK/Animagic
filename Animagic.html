@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Animagic - Advanced Interactive Animation Tool</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+<style>
+  /* Reset and base */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif,
+      'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    height: 100vh;
+    display: grid;
+    grid-template-rows: 64px 1fr 48px;
+    color: #f0f5f9;
+    overflow: hidden;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  /* Glass morphism base */
+  .glass {
+    background: rgba(255 255 255 / 0.1);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-radius: 12px;
+    border: 1px solid rgba(255 255 255 / 0.2);
+    box-shadow: 0 8px 24px rgba(255 255 255 / 0.1);
+    color: #e0e9f0;
+  }
+
+  /* Header */
+  header {
+    height: 64px;
+    background: rgba(12, 37, 58, 0.85);
+    backdrop-filter: saturate(200%) blur(16px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+  header h1 {
+    font-weight: 800;
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    color: #7be0ff;
+    user-select: none;
+    letter-spacing: 0.06em;
+  }
+
+  /* Footer */
+  footer {
+    height: 48px;
+    background: rgba(12, 37, 58, 0.8);
+    backdrop-filter: saturate(180%) blur(12px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #8bbbd9;
+    user-select: none;
+  }
+
+  /* Layout container */
+  .app-container {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    padding: 24px 48px;
+    height: calc(100vh - 112px); /* header/footer */
+    overflow: hidden;
+  }
+  @media (max-width: 900px) {
+    .app-container {
+      grid-template-columns: 1fr;
+      padding: 16px 24px;
+      height: calc(100vh - 112px);
+    }
+  }
+
+  /* Sidebar */
+  aside.sidebar {
+    padding: 24px 20px;
+    background: rgba(255 255 255 / 0.05);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0 0 0 / 0.2);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    user-select: none;
+  }
+  aside h2 {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #7be0ff;
+    margin: 0 0 12px 0;
+    user-select: none;
+  }
+
+  /* Presets */
+  .animation-presets {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  button.preset-btn {
+    background: none;
+    color: #a2dfff;
+    border: 1.5px solid #48d1ff88;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+  }
+  button.preset-btn:hover,
+  button.preset-btn:focus-visible {
+    background: #48d1ff22;
+    color: #1ac6ff;
+    outline: none;
+    box-shadow: 0 0 12px #1ac6ffaa;
+  }
+  button.preset-btn.active {
+    background: #48d1ff44;
+    color: #ffffff;
+    box-shadow: 0 0 14px #1ac6ffdd;
+  }
+
+  /* Animation controls */
+  .animation-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .control-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .control-label {
+    font-size: 1rem;
+    font-weight: 700;
+    user-select: none;
+  }
+  input[type="range"],
+  select {
+    flex: 1;
+    margin-left: 16px;
+    border-radius: 12px;
+    border: none;
+    background: rgba(255 255 255 / 0.15);
+    color: #e0e9f0;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 1rem;
+    transition: background 0.3s ease;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #4bdfff;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+    box-shadow: 0 0 8px #4bdfffaa;
+    transition: box-shadow 0.3s ease;
+  }
+  input[type="range"]:hover::-webkit-slider-thumb,
+  input[type="range"]:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 16px #4bdfffee;
+  }
+  select:hover,
+  select:focus-visible {
+    background: rgba(255 255 255 / 0.3);
+    outline: none;
+  }
+
+  /* Main animation area */
+  section.main-area {
+    background: rgba(255 255 255 / 0.07);
+    border-radius: 20px;
+    box-shadow: 0 16px 48px rgba(0 0 0 / 0.3);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+  }
+  #anim-canvas {
+    width: 100%;
+    max-width: 600px;
+    height: 400px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #144d78, #0f2d47);
+    box-shadow: inset 0 0 20px #0f2d47aa;
+    cursor: grab;
+    user-select: none;
+  }
+
+  /* Playback controls below canvas */
+  .playback-controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  button.control-btn {
+    background: rgba(75, 223, 255, 0.15);
+    border: 2px solid #4bdbff88;
+    border-radius: 16px;
+    color: #7be0ff;
+    cursor: pointer;
+    padding: 12px 20px;
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  button.control-btn:hover,
+  button.control-btn:focus-visible {
+    background-color: #4bdbffbb;
+    color: #0deeff;
+    outline: none;
+    box-shadow: 0 0 12px #0deeffee;
+  }
+  button.control-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .material-icons.icon-btn {
+    font-size: 24px;
+  }
+
+  /* Toast notifications */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 5000;
+    max-width: 360px;
+  }
+  .toast {
+    background: rgba(15, 67, 105, 0.9);
+    padding: 16px 24px;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(13, 54, 84, 0.8);
+    color: #c2e5ff;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideInRight 0.4s cubic-bezier(0.22,1,0.36,1);
+    user-select: none;
+  }
+  .toast .material-icons {
+    font-size: 28px;
+  }
+  .toast.success {
+    background: linear-gradient(135deg, #3cd7b9, #06b6d4);
+    color: #f0fff7;
+    box-shadow: 0 0 16px #06b6d4aa;
+  }
+  .toast.error {
+    background: linear-gradient(135deg, #f87171, #ef4444);
+    color: #fff5f5;
+    box-shadow: 0 0 16px #ef4444aa;
+  }
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+</style>
+</head>
+<body>
+  <header aria-label="Animagic application header">
+    <h1>Animagic</h1>
+  </header>
+  <div class="app-container" role="main">
+    <aside class="sidebar" aria-label="Animation presets and controls">
+      <h2>Animation Presets</h2>
+      <div class="animation-presets" role="list" aria-live="polite" aria-label="Animation effect presets">
+        <button class="preset-btn active" data-preset="bounce" role="listitem" tabindex="0" aria-pressed="true">Bounce</button>
+        <button class="preset-btn" data-preset="rotate" role="listitem" tabindex="-1" aria-pressed="false">Rotate</button>
+        <button class="preset-btn" data-preset="fade" role="listitem" tabindex="-1" aria-pressed="false">Fade</button>
+        <button class="preset-btn" data-preset="scale" role="listitem" tabindex="-1" aria-pressed="false">Scale</button>
+      </div>
+      <h2>Animation Controls</h2>
+      <div class="animation-controls" aria-label="Animation playback and parameters controls">
+        <div class="control-group" aria-label="Playback controls">
+          <button class="control-btn" id="play-pause-btn" aria-pressed="false" aria-label="Play animation">
+            <span class="material-icons icon-btn" aria-hidden="true">play_arrow</span> Play
+          </button>
+          <button class="control-btn" id="reset-btn" aria-label="Reset animation">
+            <span class="material-icons icon-btn" aria-hidden="true">restart_alt</span> Reset
+          </button>
+        </div>
+        <div class="control-group">
+          <label for="speed-range" class="control-label">Speed</label>
+          <input type="range" id="speed-range" min="0.1" max="3" value="1" step="0.1" aria-valuemin="0.1" aria-valuemax="3"
+            aria-valuenow="1" aria-label="Animation speed control" />
+        </div>
+        <div class="control-group">
+          <label for="loop-toggle" class="control-label">Loop</label>
+          <input type="checkbox" id="loop-toggle" aria-checked="true" aria-label="Loop animation toggle" checked />
+        </div>
+        <div class="control-group">
+          <label for="easing-select" class="control-label">Easing</label>
+          <select id="easing-select" aria-label="Animation easing function selector">
+            <option value="linear" selected>Linear</option>
+            <option value="ease">Ease</option>
+            <option value="ease-in">Ease In</option>
+            <option value="ease-out">Ease Out</option>
+            <option value="ease-in-out">Ease In Out</option>
+          </select>
+        </div>
+      </div>
+    </aside>
+
+    <section class="main-area" aria-label="Animation preview area">
+      <svg id="anim-canvas" viewBox="0 0 400 400" role="img" aria-label="Animated preview shape" tabindex="0">
+        <circle cx="200" cy="200" r="60" fill="#06b6d4" />
+      </svg>
+    </section>
+  </div>
+
+  <footer aria-label="Footer">
+    Animagic &copy; 2025 — Crafted with care.
+  </footer>
+
+  <div class="toast-container" aria-live="assertive" aria-atomic="true" aria-relevant="additions"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const animCanvas = document.getElementById('anim-canvas');
+      const animatedCircle = animCanvas.querySelector('circle');
+      const presets = document.querySelectorAll('.preset-btn');
+      const playPauseBtn = document.getElementById('play-pause-btn');
+      const resetBtn = document.getElementById('reset-btn');
+      const speedRange = document.getElementById('speed-range');
+      const loopToggle = document.getElementById('loop-toggle');
+      const easingSelect = document.getElementById('easing-select');
+      const toastContainer = document.querySelector('.toast-container');
+
+      // Animation state
+      let animationId = null;
+      let isPlaying = false;
+      let startTime = null;
+      let speed = parseFloat(speedRange.value);
+      let loop = loopToggle.checked;
+      let easing = easingSelect.value;
+      let currentPreset = 'bounce';
+
+      // Animation parameters per preset
+      const animations = {
+        bounce: (time) => {
+          const duration = 2000 / speed; // ms
+          const t = (time % duration) / duration;
+          // easeInOutQuad ease function
+          let easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+          // y move from 0 to 100
+          const translateY = easeT * 100;
+          return { transform: `translate(0, ${translateY}px)` };
+        },
+        rotate: (time) => {
+          const duration = 4000 / speed;
+          const t = (time % duration) / duration;
+          const degrees = t * 360;
+          return { transform: `rotate(${degrees}deg)` };
+        },
+        fade: (time) => {
+          const duration = 2500 / speed;
+          const t = (time % duration) / duration;
+          const opacity = Math.abs(1 - 2 * t);
+          return { opacity };
+        },
+        scale: (time) => {
+          const duration = 2000 / speed;
+          const t = (time % duration) / duration;
+          const scale = 1 + 0.5 * Math.sin(t * 2 * Math.PI);
+          return { transform: `scale(${scale})` };
+        }
+      };
+
+      // Easing functions (CSS equivalents - will approximate with cubic-bezier)
+      const easingFunctions = {
+        linear: t => t,
+        ease: t => t < 0.5 ? 2*t*t : -1+(4-2*t)*t,
+        'ease-in': t => t*t,
+        'ease-out': t => t*(2-t),
+        'ease-in-out': t => t<0.5 ? 2*t*t : -1+(4-2*t)*t,
+      };
+
+      // Show toast notification
+      function showToast(message, type = "success", duration = 3500) {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+
+        const icon = document.createElement('span');
+        icon.className = 'material-icons';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = type === "success" ? 'check_circle' : 'error';
+
+        const text = document.createElement('span');
+        text.textContent = message;
+
+        toast.appendChild(icon);
+        toast.appendChild(text);
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => toast.remove(), 500);
+        }, duration);
+      }
+
+      // Helper for requestAnimationFrame loop
+      function animate(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+
+        let props = animations[currentPreset](elapsed);
+
+        // Apply easing on translation and scaling (opacity not supported in transform)
+        if ('transform' in props) {
+          if (easing !== 'linear') {
+            // parse transform values and modify by easing curve
+            // For simplicity, apply easing on t fraction inside each animation function
+            // This demo uses builtin easing approximations internally
+          }
+          animatedCircle.style.transform = props.transform;
+          animatedCircle.style.opacity = '';
+        } else if ('opacity' in props) {
+          animatedCircle.style.opacity = props.opacity;
+          animatedCircle.style.transform = '';
+        }
+
+        if (isPlaying) {
+          animationId = requestAnimationFrame(animate);
+        }
+      }
+      // Start animation loop
+      function startAnimation() {
+        if (isPlaying) return;
+        isPlaying = true;
+        playPauseBtn.setAttribute('aria-pressed', 'true');
+        playPauseBtn.innerHTML = '<span class="material-icons icon-btn" aria-hidden="true">pause</span> Pause';
+        startTime = null;
+        animationId = requestAnimationFrame(animate);
+        showToast('Animation started');
+      }
+      // Stop animation loop
+      function stopAnimation() {
+        if (!isPlaying) return;
+        isPlaying = false;
+        playPauseBtn.setAttribute('aria-pressed', 'false');
+        playPauseBtn.innerHTML = '<span class="material-icons icon-btn" aria-hidden="true">play_arrow</span> Play';
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+        showToast('Animation stopped');
+      }
+
+      // Reset animation to base state
+      function resetAnimation() {
+        stopAnimation();
+        animatedCircle.style.transform = '';
+        animatedCircle.style.opacity = '1';
+        showToast('Animation reset');
+      }
+
+      // Preset button click handler
+      function onPresetClick(e) {
+        presets.forEach(btn => {
+          btn.classList.remove('active');
+          btn.setAttribute('aria-pressed', 'false');
+          btn.tabIndex = -1;
+        });
+        e.currentTarget.classList.add('active');
+        e.currentTarget.setAttribute('aria-pressed', 'true');
+        e.currentTarget.tabIndex = 0;
+        currentPreset = e.currentTarget.dataset.preset;
+        resetAnimation();
+        if (isPlaying) {
+          startAnimation();
+        }
+        showToast(`Selected preset: ${currentPreset}`);
+      }
+
+      // Playback button handler
+      function togglePlayPause() {
+        if (isPlaying) {
+          stopAnimation();
+        } else {
+          startAnimation();
+        }
+      }
+
+      // Speed change handler
+      function onSpeedChange(e) {
+        speed = parseFloat(e.target.value);
+        showToast(`Speed set to ${speed.toFixed(1)}x`);
+        if (isPlaying) {
+          resetAnimation();
+          startAnimation();
+        }
+      }
+
+      // Loop toggle handler (not used inside current animation, placeholder)
+      function onLoopToggle(e) {
+        loop = e.target.checked;
+        showToast(`Looping ${loop ? 'enabled' : 'disabled'}`);
+      }
+
+      // Easing change handler (not used inside current animation, placeholder)
+      function onEasingChange(e) {
+        easing = e.target.value;
+        showToast(`Easing set to ${easing}`);
+      }
+
+      // Keyboard navigation accessibility for preset buttons
+      presets.forEach(btn => {
+        btn.addEventListener('click', onPresetClick);
+        btn.addEventListener('keydown', e => {
+          const currentIndex = Array.from(presets).indexOf(e.target);
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            const nextIndex = (currentIndex + 1) % presets.length;
+            presets[nextIndex].focus();
+          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prevIndex = (currentIndex - 1 + presets.length) % presets.length;
+            presets[prevIndex].focus();
+          } else if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onPresetClick(e);
+          }
+        });
+      });
+
+      playPauseBtn.addEventListener('click', togglePlayPause);
+      resetBtn.addEventListener('click', resetAnimation);
+      speedRange.addEventListener('input', onSpeedChange);
+      loopToggle.addEventListener('change', onLoopToggle);
+      easingSelect.addEventListener('change', onEasingChange);
+
+      // Initial focus styling
+      window.addEventListener('load', () => {
+        presets[0].setAttribute('aria-pressed', 'true');
+        presets[0].tabIndex = 0;
+        speedRange.setAttribute('aria-valuenow', speed);
+      });
+
+    })();
+  </script>
+</body>
+</html>
+
